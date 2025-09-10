@@ -2,18 +2,16 @@
 import axios from "axios";
 
 export default async function handler(req, res) {
-  if (req.method !== "POST" && req.method !== "GET") {
-    return res.status(405).json({ error: "Method Not Allowed" });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Metode tidak diizinkan" });
   }
 
-  const text = req.method === "POST"
-    ? (req.body?.text || "")
-    : (req.query?.text || "");
+  const text = req.body?.text || "Hello";
 
   try {
     const url = new URL("https://yw85opafq6.execute-api.us-east-1.amazonaws.com/default/boss_mode_15aug");
     url.search = new URLSearchParams({
-      text: text || "Hello",
+      text,
       country: "Europe",
       user_id: "Av0SkyG00D",
     }).toString();
@@ -26,18 +24,13 @@ export default async function handler(req, res) {
       timeout: 20000,
     });
 
-    // Ambil respons yang relevan
-    let result = "";
-    if (typeof data === "string") result = data;
-    else if (data.answer) result = data.answer;
-    else if (data.output) result = data.output;
-    else if (data.result) result = data.result;
-    else result = JSON.stringify(data);
+    // filter hasil
+    let answer = data.answer || data.output || data.result || JSON.stringify(data);
+    if (!answer.trim()) answer = "⚠️ tidak menemukan jawaban.";
+    answer = answer.replace(/\\n/g, "\n").replace(/n\\/g, "\n");
 
-    result = result.replace(/\\n/g, "\n").replace(/n\\/g, "\n").trim();
-
-    return res.status(200).json({ success: true, text: result });
+    res.status(200).json({ text: answer });
   } catch (err) {
-    return res.status(500).json({ error: "Gagal ambil respons AI", detail: err.message });
+    res.status(500).json({ error: "Gagal ambil respons AI", detail: err.message });
   }
 }
