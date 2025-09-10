@@ -3,7 +3,7 @@ const axios = require("axios");
 const path = require("path");
 
 const app = express();
-const PORT = 8080;
+const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
@@ -23,10 +23,21 @@ async function fetchAI(text) {
     },
     timeout: 20000,
   });
-  return data;
+
+  // 🔎 Filter hasil AI
+  let result = "";
+  if (typeof data === "string") result = data;
+  else if (data.answer) result = data.answer;
+  else if (data.output) result = data.output;
+  else if (data.result) result = data.result;
+  else result = JSON.stringify(data);
+
+  result = result.replace(/\\n/g, "\n").replace(/n\\/g, "\n").trim();
+
+  return { success: true, text: result };
 }
 
-// Compatibility route (GET)
+// GET route
 app.get("/chat", async (req, res) => {
   try {
     const data = await fetchAI(req.query.text || "");
@@ -36,10 +47,10 @@ app.get("/chat", async (req, res) => {
   }
 });
 
-// New route for frontend (POST)
+// POST route (frontend pakai ini)
 app.post("/ai", async (req, res) => {
   try {
-    const text = (req.body && req.body.text) ? String(req.body.text) : "";
+    const text = req.body.text ? String(req.body.text) : "";
     const data = await fetchAI(text);
     res.json(data);
   } catch (err) {
@@ -47,6 +58,7 @@ app.post("/ai", async (req, res) => {
   }
 });
 
+// Jalankan server
 app.listen(PORT, () => {
   console.log(`🚀 Server jalan di http://localhost:${PORT}`);
 });
